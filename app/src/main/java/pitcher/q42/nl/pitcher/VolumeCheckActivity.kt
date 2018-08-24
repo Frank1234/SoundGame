@@ -1,6 +1,7 @@
 package pitcher.q42.nl.pitcher
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import be.tarsos.dsp.AudioEvent
@@ -36,7 +37,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
     var rangeToDetectForeground = 10
     var notesToGo = 6
 
-    var lastForegroundRecording: Recording? = null
+    var foregroundNoteBeingTracked: Recording? = null
     val foundForegroundNotes = mutableListOf<Recording>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,8 +54,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
         updateView()
     }
 
-    fun updateView() {
-
+    fun updateView() = runOnUiThread {
         val button = findViewById<TextView>(R.id.start_button)
         val messageTv = findViewById<TextView>(R.id.vol_tv)
 
@@ -112,33 +112,34 @@ class VolumeCheckActivity : BaseSoundActivity() {
 
     fun recordBackgroundVolume(currentSPL: Double) {
 
-        // TODO check if we need to allow "silent" to come in here too. (in a quiet invironment)
-
         receivedBackgroundVolumes.add(currentSPL)
     }
 
     fun recordForegroundVolume(audioEvent: AudioEvent, currentVolume: Double) {
 
         val backgroundAvarage = receivedBackgroundVolumes.average()
+        val lastOne = foregroundNoteBeingTracked
 
         if (currentVolume - backgroundAvarage >= rangeToDetectForeground) {
             // there is quite a volume change compared to the background noise:
 
-            val lastOne = lastForegroundRecording
             if (lastOne == null || !lastOne.isRoughlyTheSame(currentVolume)) {
-                // start new sound 'recording'
-                lastForegroundRecording = Recording(currentVolume, System.currentTimeMillis())
-            } else if (System.currentTimeMillis() - lastOne.startTs > 250) {
+                // start tracking this note/sound:
+                foregroundNoteBeingTracked = Recording(currentVolume, System.currentTimeMillis())
+            } else if (System.currentTimeMillis() - lastOne.startTs > 250
+                    && !(foundForegroundNotes.lastOrNull() == lastOne)) {
                 // played for quite some time, this must be a note.
-                lastForegroundRecording?.let { foundForegroundNotes.add(it) }
-                lastForegroundRecording = null
+                Log.d("SSS", "played for quite some time, this must be a note. ${System.currentTimeMillis() - lastOne.startTs}")
+                foregroundNoteBeingTracked?.let { foundForegroundNotes.add(it) }
                 notesToGo--
                 if (notesToGo <= 0) changeState(State.STATE_DONE)
                 else updateView()
             } else {
-                // continue last recording, it is the same and hasn't played long enough
+                // continue last recording, it is the same and hasn't played long enough or we already saved it.
             }
-
+        } else {
+            // sound is no longer loud enough, quit tracking the current note if there is one:
+            foregroundNoteBeingTracked = null
         }
     }
 }
