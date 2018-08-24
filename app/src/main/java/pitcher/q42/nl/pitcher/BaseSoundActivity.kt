@@ -70,7 +70,7 @@ abstract class BaseSoundActivity : AppCompatActivity() {
 
             override fun process(audioEvent: AudioEvent?): Boolean {
 //                if (silenceDetector.currentSPL() > volumeThreshold) {
-                Log.d("Sound1", "Sound detected of ${silenceDetector.currentSPL()}dB SPL")
+//                Log.d("Sound1", "Sound detected of ${silenceDetector.currentSPL()}dB SPL")
                 audioEvent?.let { onSoundEvent(it, silenceDetector.currentSPL()) }
 //                } else {
 ////                    Log.d("Sound2", ".......silent sound detected of ${silenceDetector.currentSPL()}dB SPL")

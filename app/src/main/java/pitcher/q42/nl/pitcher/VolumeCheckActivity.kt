@@ -24,6 +24,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
         fun isRoughlyTheSame(otherVolume: Double) = Math.abs(volume - otherVolume) < rangeToBeSameVolume
     }
 
+    val notesToRecord = 6
     var state: State = State.STATE_INITIAL
 
     /**
@@ -35,14 +36,21 @@ class VolumeCheckActivity : BaseSoundActivity() {
      * Start DB of which a sound qualifies as "foreground" noise, compared to the background noise.
      */
     var rangeToDetectForeground = 10
-    var notesToGo = 6
+    /**
+     * range to stop detecting the foreground note when we are already tracking one.
+     */
+    var rangeToStopDetectForeground = 20
 
     var foregroundNoteBeingTracked: Recording? = null
-    val foundForegroundNotes = mutableListOf<Recording>()
+    val recordedForegroundNotes = mutableListOf<Recording>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_volume)
+
+        avarageBackgroundVolume = null
+        avarageForegroundVolume = null
+
         updateView()
     }
 
@@ -76,6 +84,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
                         messageTv.setText("Please be quiet for... $x")
                         messageTv.postDelayed(runnable, 1000)
                     } else {
+                        Log.d("SSS", "AVARAGE BACKGROUND IS $avarageBackgroundVolume")
                         changeState(State.STATE_RECORD_FOREGROUND)
                     }
                 }
@@ -84,12 +93,12 @@ class VolumeCheckActivity : BaseSoundActivity() {
             State.STATE_RECORD_FOREGROUND -> {
                 button.visibility = View.GONE
                 messageTv.visibility = View.VISIBLE
-                messageTv.setText("Volume check\n\nplease play six different notes...\n\n$notesToGo to go!")
+                messageTv.setText("Volume check\n\nplease play six different notes...\n\n${notesToRecord - recordedForegroundNotes.size} to go!")
             }
             State.STATE_DONE -> {
 
                 avarageBackgroundVolume = receivedBackgroundVolumes.average()
-                avarageForegroundVolume = foundForegroundNotes.map { it.volume }.average()
+                avarageForegroundVolume = recordedForegroundNotes.map { it.volume }.average()
 
                 button.visibility = View.VISIBLE
                 button.text = "Continue"
@@ -117,28 +126,31 @@ class VolumeCheckActivity : BaseSoundActivity() {
 
     fun recordForegroundVolume(audioEvent: AudioEvent, currentVolume: Double) {
 
+        Log.d("Sound1", "Sound detected of ${currentVolume}dB SPL")
+
         val backgroundAvarage = receivedBackgroundVolumes.average()
         val lastOne = foregroundNoteBeingTracked
 
         if (currentVolume - backgroundAvarage >= rangeToDetectForeground) {
             // there is quite a volume change compared to the background noise:
 
-            if (lastOne == null || !lastOne.isRoughlyTheSame(currentVolume)) {
+            if (lastOne == null) { //  || !lastOne.isRoughlyTheSame(currentVolume)
                 // start tracking this note/sound:
                 foregroundNoteBeingTracked = Recording(currentVolume, System.currentTimeMillis())
+                Log.d("SSS", "start tracking this note/sound $foregroundNoteBeingTracked")
             } else if (System.currentTimeMillis() - lastOne.startTs > 250
-                    && !(foundForegroundNotes.lastOrNull() == lastOne)) {
+                    && !(recordedForegroundNotes.lastOrNull() == lastOne)) {
                 // played for quite some time, this must be a note.
                 Log.d("SSS", "played for quite some time, this must be a note. ${System.currentTimeMillis() - lastOne.startTs}")
-                foregroundNoteBeingTracked?.let { foundForegroundNotes.add(it) }
-                notesToGo--
-                if (notesToGo <= 0) changeState(State.STATE_DONE)
+                foregroundNoteBeingTracked?.let { recordedForegroundNotes.add(it) }
+                if (recordedForegroundNotes.size >= notesToRecord) changeState(State.STATE_DONE)
                 else updateView()
             } else {
                 // continue last recording, it is the same and hasn't played long enough or we already saved it.
             }
-        } else {
+        } else if (currentVolume - backgroundAvarage <= rangeToStopDetectForeground) {
             // sound is no longer loud enough, quit tracking the current note if there is one:
+            foregroundNoteBeingTracked?.let { Log.d("SSS", "sound is no longer loud enough, quit tracking the current note if there is one: $foregroundNoteBeingTracked") }
             foregroundNoteBeingTracked = null
         }
     }
