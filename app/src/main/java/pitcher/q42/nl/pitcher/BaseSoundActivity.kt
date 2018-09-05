@@ -27,7 +27,6 @@ abstract class BaseSoundActivity : AppCompatActivity() {
     }
 
     private fun tryInitPitchHandler() {
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
