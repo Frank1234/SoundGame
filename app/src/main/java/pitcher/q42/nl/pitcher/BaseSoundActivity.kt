@@ -81,7 +81,7 @@ abstract class BaseSoundActivity : AppCompatActivity() {
                 val vol = silenceDetector.currentSPL()
 
                 if (result.pitch > 0) {
-                    Log.d("AAA", "SSS PITCH ${result.pitch} (${result.probability}) , VOL " + vol)
+                    //Log.d("AAA", "SSS PITCH ${result.pitch} (${result.probability}) , VOL " + vol)
                     onSoundEvent(audioEvent, vol, result.pitch)
                 } else {
 //                        Log.d("SSS", "SSS NO PITCH? ${result.pitch} from $var2")

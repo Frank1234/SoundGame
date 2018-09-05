@@ -95,7 +95,6 @@ class VolumeCheckActivity : BaseSoundActivity() {
                 messageTv.setText("Volume check\n\nplease play six different notes...\n\n${notesToRecord - recordedForegroundNotes.size} to go!")
             }
             State.STATE_DONE -> {
-
                 avarageForegroundVolume = recordedForegroundNotes.map { it.avarageVolume }.average()
                 foregroundTestRecordings = recordedForegroundNotes
 
@@ -103,7 +102,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
                 button.text = "Continue"
                 button.setOnClickListener { finish() }
                 messageTv.visibility = View.VISIBLE
-                messageTv.setText("Thank you!\n\nAvBack: $avarageBackgroundVolume \n\nAvFor: $avarageForegroundVolume")
+                messageTv.setText("Thank you!\n\nAvBack: $avarageBackgroundVolume \n\nAvFor: $avarageForegroundVolume \n \n ${recordedForegroundNotes.map { it.avaragePitch }}")
             }
         }
     }
@@ -124,6 +123,9 @@ class VolumeCheckActivity : BaseSoundActivity() {
 
     fun onNoteDetected(detectedNote: NoteDetector.DetectedNote) {
         recordedForegroundNotes.add(detectedNote)
+        if (recordedForegroundNotes.size == notesToRecord) {
+            state = State.STATE_DONE
+        }
         updateView()
     }
 
