@@ -8,18 +8,15 @@ import android.os.Looper
 import android.support.constraint.ConstraintLayout
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import be.tarsos.dsp.io.android.AudioDispatcherFactory
 import be.tarsos.dsp.pitch.PitchDetectionHandler
 import be.tarsos.dsp.pitch.PitchProcessor
 import kotlinx.android.synthetic.main.main_scene.*
-import android.widget.RelativeLayout
+import be.tarsos.dsp.AudioEvent
 
 
-
-
-class MainGameSceneActivity : AppCompatActivity() {
+class MainGameSceneActivity : BaseSoundActivity() {
 
     var notesArray = listOf(Note.A, Note.B, Note.C, Note.D, Note.G)
     var currentIndex = 0
@@ -29,9 +26,6 @@ class MainGameSceneActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_scene)
-
-        tryInitPitchHandler()
-
         current_note_tv.text = notesArray[currentIndex].label
     }
 
@@ -57,6 +51,15 @@ class MainGameSceneActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+
+    override fun onSoundEvent(audioEvent: AudioEvent, currentSPL: Double, pitchInHz: Float) {
+        processPitch(pitchInHz)
+    }
+
+    override fun onPitchEvent(pitchInHz: Float) {
+
     }
 
     private fun initPitchHandler() {

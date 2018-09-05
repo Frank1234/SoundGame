@@ -21,7 +21,7 @@ class MainActivity : BaseSoundActivity() {
         }
     }
 
-    override fun onSoundEvent(audioEvent: AudioEvent, currentSPL: Double) {
+    override fun onSoundEvent(audioEvent: AudioEvent, currentSPL: Double, pitchInHz: Float) {
     }
 
 }

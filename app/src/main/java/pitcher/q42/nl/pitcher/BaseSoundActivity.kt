@@ -59,7 +59,9 @@ abstract class BaseSoundActivity : AppCompatActivity() {
     private fun initVolumeHandler() {
 
         val dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
+
         val silenceDetector = SilenceDetector(volumeThreshold, false)
+        val pitchDetector = PitchEstimationAlgorithm.FFT_YIN.getDetector(22050f, 1024)
 
         dispatcher.addAudioProcessor(silenceDetector) // TODO what does this do?
 
@@ -70,10 +72,20 @@ abstract class BaseSoundActivity : AppCompatActivity() {
             override fun process(audioEvent: AudioEvent?): Boolean {
 //                if (silenceDetector.currentSPL() > volumeThreshold) {
 //                Log.d("Sound1", "Sound detected of ${silenceDetector.currentSPL()}dB SPL")
-                audioEvent?.let { onSoundEvent(it, silenceDetector.currentSPL()) }
-//                } else {
-////                    Log.d("Sound2", ".......silent sound detected of ${silenceDetector.currentSPL()}dB SPL")
-//                }
+                if (audioEvent == null) {
+                    return true;
+                }
+                val var2 = audioEvent.getFloatBuffer()
+                val result = pitchDetector.getPitch(var2)
+
+                val vol = silenceDetector.currentSPL()
+
+                if (result.pitch > 0) {
+                    Log.d("AAA", "SSS PITCH ${result.pitch} (${result.probability}) , VOL " + vol)
+                    onSoundEvent(audioEvent, vol, result.pitch)
+                } else {
+//                        Log.d("SSS", "SSS NO PITCH? ${result.pitch} from $var2")
+                }
                 return true
             }
         })
@@ -96,5 +108,5 @@ abstract class BaseSoundActivity : AppCompatActivity() {
 
     abstract fun onPitchEvent(pitchInHz: Float)
 
-    abstract fun onSoundEvent(audioEvent: AudioEvent, currentSPL: Double)
+    abstract fun onSoundEvent(audioEvent: AudioEvent, currentSPL: Double, pitchInHz: Float)
 }
