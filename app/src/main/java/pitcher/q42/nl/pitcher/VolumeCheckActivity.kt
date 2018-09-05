@@ -15,28 +15,9 @@ data class Recording(val volume: Double,
 
 var avarageBackgroundVolume: Double? = null
 var avarageForegroundVolume: Double? = null
-var foregroundTestRecordings: List<Recording> = listOf()
+var foregroundTestRecordings: List<NoteDetector.DetectedNote> = listOf()
 
 class VolumeCheckActivity : BaseSoundActivity() {
-
-    companion object {
-        /**
-         * Start DB of which a sound qualifies as "foreground" noise, compared to the background noise.
-         */
-        val RANGE_TO_START_DETECT_FOREGROUND = 10
-        /**
-         * Minimum time we say a note should last.
-         */
-        val MIN_NOTE_LENGTH_MS = 350
-        /**
-         * range to stop detecting the foreground (relative to the first recorded sound).
-         */
-        var VOLUME_RANGE_TO_STOP_DETECT_FOREGROUND = 5
-        /**
-         * Maximum pitch a note may change for us to still regard it as a single note.
-         */
-        val MAX_DELTA_PITCH_FOR_NOTE = 4
-    }
 
     enum class State {
         STATE_INITIAL,
@@ -53,8 +34,8 @@ class VolumeCheckActivity : BaseSoundActivity() {
      */
     val receivedBackgroundVolumes = mutableListOf<Double>(SilenceDetector.DEFAULT_SILENCE_THRESHOLD)
 
-    var foregroundNoteBeingTracked: Recording? = null
-    val recordedForegroundNotes = mutableListOf<Recording>()
+    var noteDetector: NoteDetector? = null
+    val recordedForegroundNotes = mutableListOf<NoteDetector.DetectedNote>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +43,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
 
         avarageBackgroundVolume = null
         avarageForegroundVolume = null
+        noteDetector = null
         foregroundTestRecordings = listOf()
 
         updateView()
@@ -100,6 +82,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
                         messageTv.postDelayed(runnable, 1000)
                     } else {
                         avarageBackgroundVolume = receivedBackgroundVolumes.average()
+                        noteDetector = NoteDetector(avarageBackgroundVolume!!, { onNoteDetected(it) })
                         Log.d("SSS", "AVARAGE BACKGROUND IS $avarageBackgroundVolume")
                         changeState(State.STATE_RECORD_FOREGROUND)
                     }
@@ -113,7 +96,7 @@ class VolumeCheckActivity : BaseSoundActivity() {
             }
             State.STATE_DONE -> {
 
-                avarageForegroundVolume = recordedForegroundNotes.map { it.volume }.average()
+                avarageForegroundVolume = recordedForegroundNotes.map { it.avarageVolume }.average()
                 foregroundTestRecordings = recordedForegroundNotes
 
                 button.visibility = View.VISIBLE
@@ -139,44 +122,13 @@ class VolumeCheckActivity : BaseSoundActivity() {
         receivedBackgroundVolumes.add(currentSPL)
     }
 
-    fun recordForegroundVolume(audioEvent: AudioEvent, currentVolume: Double, currentPitchInHz: Float) {
+    fun onNoteDetected(detectedNote: NoteDetector.DetectedNote) {
+        recordedForegroundNotes.add(detectedNote)
+        updateView()
+    }
 
-        Log.d("SSSS", "SSSS Sound detected of ${currentVolume}dB SPL with pitch $currentPitchInHz")
+    fun recordForegroundVolume(audioEvent: AudioEvent, volume: Double, pitch: Float) {
 
-        val backgroundAvarage = receivedBackgroundVolumes.average()
-        val lastOne = foregroundNoteBeingTracked
-
-        val isForegroundVolume = Math.abs(currentVolume - backgroundAvarage) >= RANGE_TO_START_DETECT_FOREGROUND
-        val isSameVolumeAsCurrentNote = lastOne != null && Math.abs(currentVolume - lastOne.volumes[0]) <= VOLUME_RANGE_TO_STOP_DETECT_FOREGROUND
-        val isSamePitchAsCurrent = lastOne != null && Math.abs(currentPitchInHz - lastOne.pitches[0]) <= MAX_DELTA_PITCH_FOR_NOTE
-
-        if (isForegroundVolume) {
-            // there is quite a volume change compared to the background noise:
-
-            if (lastOne == null) { //  || !lastOne.isRoughlyTheSame(currentVolume)
-                // start tracking this note/sound:
-                foregroundNoteBeingTracked = Recording(currentVolume, System.currentTimeMillis(), currentPitchInHz)
-                foregroundNoteBeingTracked?.volumes?.add(currentVolume)
-                foregroundNoteBeingTracked?.pitches?.add(currentPitchInHz)
-                Log.d("SSSS", "start tracking this note/sound $foregroundNoteBeingTracked")
-            } else {
-
-                if (!isSameVolumeAsCurrentNote || !isSamePitchAsCurrent) {
-                    Log.d("SSS", "STOPPED vol $isSameVolumeAsCurrentNote pitch $isSamePitchAsCurrent")
-                    foregroundNoteBeingTracked = null
-                } else if (System.currentTimeMillis() - lastOne.startTs > MIN_NOTE_LENGTH_MS
-                        && !(recordedForegroundNotes.lastOrNull() == lastOne)) {
-                    // played for quite some time, this must be a note.
-                    Log.d("SSSS", "played for quite some time, this must be a note. ${System.currentTimeMillis() - lastOne.startTs}")
-                    foregroundNoteBeingTracked?.let { recordedForegroundNotes.add(it) }
-                    if (recordedForegroundNotes.size >= notesToRecord) changeState(State.STATE_DONE)
-                    else updateView()
-                } else {
-                    // continue last recording, it is the same and hasn't played long enough or we already saved it.
-                    lastOne.volumes.add(currentVolume)
-                    lastOne.pitches.add(currentPitchInHz)
-                }
-            }
-        }
+        noteDetector?.onNewAudioEvent(volume, pitch, System.currentTimeMillis())
     }
 }
