@@ -47,13 +47,13 @@ class NoteDetector(val silenceVolume: Double, val noteListener: (DetectedNote) -
 
     fun checkForNote() {
 
-//        if (!checkAvaragePitch()) {
-//            return
-//        }
+        if (!checkAvaragePitch()) {
+            return
+        }
         val averageVolume = getAverageVolume()
-//        if (!checkAverageVolume(averageVolume)) {
-//            return
-//        }
+        if (!checkAverageVolume(averageVolume)) {
+            return
+        }
         if (!checkNoVolumeDrops(averageVolume)) {
             return
         }
