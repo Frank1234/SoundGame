@@ -129,6 +129,6 @@ class VolumeCheckActivity : BaseSoundActivity() {
 
     fun recordForegroundVolume(audioEvent: AudioEvent, volume: Double, pitch: Float) {
 
-        noteDetector?.onNewAudioEvent(volume, pitch, audioEvent.timeStamp)
+        noteDetector?.onNewAudioEvent(volume, pitch, System.currentTimeMillis())
     }
 }

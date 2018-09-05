@@ -18,12 +18,12 @@ class NoteDetector(val silenceVolume: Double, val noteListener: (DetectedNote) -
         val MAX_ALLOWED_VARIANTION_PITH = 3.0f
     }
 
-    data class Event(val volume: Double, val pitch: Float, val timeStamp: Double, var duration: Double = 1.toDouble())
-    data class DetectedNote(val avarageVolume: Double, val avaragePitch: Double, val timeStamp: Double, var duration: Double = 1.toDouble())
+    private data class Event(val volume: Double, val pitch: Float, val timeStamp: Long, var duration: Long = 1L)
+    data class DetectedNote(val avarageVolume: Double, val avaragePitch: Double, val timeStamp: Long, var duration: Long = 1L)
 
-    val events = mutableListOf<Event>()
+    private val events = mutableListOf<Event>()
 
-    fun onNewAudioEvent(volume: Double, pitch: Float, timeStamp: Double) {
+    fun onNewAudioEvent(volume: Double, pitch: Float, timeStamp: Long) {
 
         // set duration on last event:
         events.lastOrNull()?.apply {
@@ -47,18 +47,18 @@ class NoteDetector(val silenceVolume: Double, val noteListener: (DetectedNote) -
 
     fun checkForNote() {
 
-        if (!checkAvaragePitch()) {
-            return
-        }
+//        if (!checkAvaragePitch()) {
+//            return
+//        }
         val averageVolume = getAverageVolume()
-        if (!checkAverageVolume(averageVolume)) {
-            return
-        }
+//        if (!checkAverageVolume(averageVolume)) {
+//            return
+//        }
         if (!checkNoVolumeDrops(averageVolume)) {
             return
         }
 
-        noteListener(DetectedNote(averageVolume, events.map { it.pitch }.average(), events.first().timeStamp, 250.0))
+        noteListener(DetectedNote(averageVolume, events.map { it.pitch }.average(), events.first().timeStamp, 250L))
     }
 
     fun checkAvaragePitch(): Boolean {
@@ -84,7 +84,7 @@ class NoteDetector(val silenceVolume: Double, val noteListener: (DetectedNote) -
     /**
      * Removes old (not needed anymore) events from the list.
      */
-    fun cleanUpOldEvents(currentTime: Double) {
+    fun cleanUpOldEvents(currentTime: Long) {
         events.removeIf { it.timeStamp < currentTime - EVENT_LIVETIME }
     }
 }
